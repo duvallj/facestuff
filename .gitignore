@@ -1,0 +1,13 @@
+# Ignore CMake buildfiles
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+
+# Ignore buildsystem files
+Makefile
+build.ninja
+.ninja_*
+
+# Ignore final executable
+FaceStuff.exe
+FaceStuff
