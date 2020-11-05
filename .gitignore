@@ -7,7 +7,12 @@ cmake_install.cmake
 Makefile
 build.ninja
 .ninja_*
+.clangd/
+compile_commands.json
 
 # Ignore final executable
 FaceStuff.exe
+FaceStuff.pdb
+*.dll
 FaceStuff
+
