@@ -18,18 +18,25 @@ bool Detector::load_classifiers(cv::String face_cascade_path, cv::String eyes_ca
   return true;
 }
 
+/**
+* @brief Given a frame, detect a face in it
+* 
+* Updates the internal state of the detector, which can be read out with accessor methods
+* @param[in] frame The frame to detect a face in
+* @pre The cascade classifiers should be initialized
+*/
 void Detector::detect_face(cv::Mat frame) {
   // Prepare frame for detection
   cv::Mat frame_gray;
   cv::cvtColor(frame, frame_gray, cv::COLOR_BGR2GRAY);
   cv::equalizeHist(frame_gray, frame_gray);
-
+  
   // Run facial detection first
   std::vector<cv::Rect> faces;
   face_cascade.detectMultiScale(frame_gray, faces);
 
   // TODO: come up with better heuristic other than "first face seen"
-  if (faces.size() >= 0) {
+  if (faces.size() >= 1) {
     _face_roi = faces[0];
     _face_center = cv::Point(_face_roi.x + _face_roi.width/2, _face_roi.y + _face_roi.height/2);
 
@@ -60,8 +67,10 @@ void Detector::detect_face(cv::Mat frame) {
  *      it doesn't make much sense
  */
 void Detector::draw_face(cv::Mat frame) {
-  cv::ellipse(frame, _face_center, cv::Size(_face_roi.width/2, _face_roi.height/2), 0, 0, 360, cv::Scalar(255, 0, 255), 4);
+  if (_has_detected) {
+    cv::ellipse(frame, _face_center, cv::Size(_face_roi.width / 2, _face_roi.height / 2), 0, 0, 360, cv::Scalar(255, 0, 255), 4);
 
-  cv::circle(frame, _eye_left, 20, cv::Scalar(255, 0, 0), 4);
-  cv::circle(frame, _eye_right, 20, cv::Scalar(0, 0, 255), 4);
+    cv::circle(frame, _eye_left, 20, cv::Scalar(255, 0, 0), 4);
+    cv::circle(frame, _eye_right, 20, cv::Scalar(0, 0, 255), 4);
+  }
 }

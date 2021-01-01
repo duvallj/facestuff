@@ -3,16 +3,31 @@ CMakeCache.txt
 CMakeFiles/
 cmake_install.cmake
 
-# Ignore buildsystem files
-Makefile
-build.ninja
-.ninja_*
+# Ignore YouCompleteMe files
 .clangd/
 compile_commands.json
 
+# Ignore buildsystem files
+# Make
+Makefile
+# Ninja
+build.ninja
+.ninja_*
+# Visual Studio
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+Debug/
+x64/
+x86/
+FaceStuff.dir/
+
 # Ignore final executable
+FaceStuff
 FaceStuff.exe
 FaceStuff.pdb
 *.dll
-FaceStuff
 
+/.vs
+/Release/Resources
