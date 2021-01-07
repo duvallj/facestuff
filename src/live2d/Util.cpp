@@ -47,7 +47,7 @@ Csm::csmByte* LAppUtil::load_file_as_bytes(const std::string filePath, Csm::csmS
   file.close();
 
   if (outSize != NULL) {
-    *outSize = size;
+    *outSize = static_cast<Csm::csmSizeInt>(size);
   }
   return reinterpret_cast<Csm::csmByte*>(buf);
 }

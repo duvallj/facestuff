@@ -11,6 +11,8 @@
 #include <Id/CubismIdManager.hpp>
 #include <Motion/CubismMotionQueueEntry.hpp>
 
+#include "Displayer.hpp"
+#include "TextureManager.hpp"
 #include "Definitions.hpp"
 #include "Util.hpp"
 
@@ -109,8 +111,7 @@ void Model::setup_model(Live2D::Cubism::Framework::ICubismModelSetting* settings
   //Cubism Model
   if (strcmp(_modelSetting->GetModelFileName(), "") != 0)
   {
-    Csm::csmString path = _modelSetting->GetModelFileName();
-    path = _modelHomeDir + path;
+    const Csm::csmString path = _modelHomeDir + _modelSetting->GetModelFileName();
 
     if (_debugMode)
     {
@@ -128,9 +129,8 @@ void Model::setup_model(Live2D::Cubism::Framework::ICubismModelSetting* settings
     const Csm::csmInt32 count = _modelSetting->GetExpressionCount();
     for (Csm::csmInt32 i = 0; i < count; i++)
     {
-      Csm::csmString name = _modelSetting->GetExpressionName(i);
-      Csm::csmString path = _modelSetting->GetExpressionFileName(i);
-      path = _modelHomeDir + path;
+      const Csm::csmString name = _modelSetting->GetExpressionName(i);
+      const Csm::csmString path = _modelHomeDir + _modelSetting->GetExpressionFileName(i);
 
       buffer = create_buffer(path.GetRawString(), &size);
       if (buffer != NULL) {
@@ -151,8 +151,7 @@ void Model::setup_model(Live2D::Cubism::Framework::ICubismModelSetting* settings
   //Physics
   if (strcmp(_modelSetting->GetPhysicsFileName(), "") != 0)
   {
-    Csm::csmString path = _modelSetting->GetPhysicsFileName();
-    path = _modelHomeDir + path;
+    const Csm::csmString path = _modelHomeDir + _modelSetting->GetPhysicsFileName();
 
     buffer = create_buffer(path.GetRawString(), &size);
     if (buffer != NULL) {
@@ -164,8 +163,7 @@ void Model::setup_model(Live2D::Cubism::Framework::ICubismModelSetting* settings
   //Pose
   if (strcmp(_modelSetting->GetPoseFileName(), "") != 0)
   {
-    Csm::csmString path = _modelSetting->GetPoseFileName();
-    path = _modelHomeDir + path;
+    const Csm::csmString path = _modelHomeDir + _modelSetting->GetPoseFileName();
 
     buffer = create_buffer(path.GetRawString(), &size);
     if (buffer != NULL) {
@@ -198,8 +196,7 @@ void Model::setup_model(Live2D::Cubism::Framework::ICubismModelSetting* settings
   //UserData
   if (strcmp(_modelSetting->GetUserDataFile(), "") != 0)
   {
-    Csm::csmString path = _modelSetting->GetUserDataFile();
-    path = _modelHomeDir + path;
+    Csm::csmString path = _modelHomeDir + _modelSetting->GetUserDataFile();
     buffer = create_buffer(path.GetRawString(), &size);
     if (buffer != NULL) {
       LoadUserData(buffer, size);
@@ -249,8 +246,7 @@ void Model::preload_motion_group(const Csm::csmChar* group) {
 
   for (Csm::csmInt32 i = 0; i < count; i++) {
     Csm::csmString name = Live2D::Cubism::Framework::Utils::CubismString::GetFormatedString("%s_%d", group, i);
-    Csm::csmString path = _modelSetting->GetMotionFileName(group, i);
-    path = _modelHomeDir + path;
+    Csm::csmString path = _modelHomeDir + _modelSetting->GetMotionFileName(group, i);
 
     if (_debugMode) {
       LAppUtil::print_log("[APP] loading motion %s => [%s_%d]", path.GetRawString(), group, i);
@@ -370,4 +366,196 @@ void Model::update() {
   }
 
   _model->Update();
+}
+
+Csm::CubismMotionQueueEntryHandle Model::start_motion(const Csm::csmChar* group, Csm::csmInt32 num, Csm::csmInt32 priority, Csm::ACubismMotion::FinishedMotionCallback on_motion_finished) {
+  if (priority == LAppDefinitions::PriorityForce) {
+    _motionManager->SetReservePriority(priority);
+  }
+  else if (!_motionManager->ReserveMotion(priority)) {
+    if (_debugMode) {
+      LAppUtil::print_log("Error: can't start motion priority %d", priority);
+    }
+    return Csm::InvalidMotionQueueEntryHandleValue;
+  }
+
+  const Csm::csmString filename = _modelSetting->GetMotionFileName(group, num);
+  Csm::csmString name = Live2D::Cubism::Framework::Utils::CubismString::GetFormatedString("%s_%d", group, num);
+  Live2D::Cubism::Framework::CubismMotion* motion = static_cast<Live2D::Cubism::Framework::CubismMotion*>(_motions[name.GetRawString()]);
+  Csm::csmBool auto_delete = false;
+
+  if (motion == NULL) {
+    // The motion isn't already present in the list of pre-loaded motions,
+    // So we create a temporary motion object and set it to destroy once it's done
+    const Csm::csmString path = _modelHomeDir + filename;
+    
+    Csm::csmByte* buffer;
+    Csm::csmSizeInt size;
+    buffer = create_buffer(path.GetRawString(), &size);
+    if (buffer != NULL) {
+      motion = static_cast<Live2D::Cubism::Framework::CubismMotion*>(LoadMotion(buffer, size, NULL, on_motion_finished));
+      Csm::csmFloat32 fadeTime = _modelSetting->GetMotionFadeInTimeValue(group, num);
+      if (fadeTime >= 0.0f) {
+        motion->SetFadeInTime(fadeTime);
+      }
+
+      fadeTime = _modelSetting->GetMotionFadeOutTimeValue(group, num);
+      if (fadeTime >= 0.0f) {
+        motion->SetFadeOutTime(fadeTime);
+      }
+
+      motion->SetEffectIds(_eyeBlinkIds, _lipSyncIds);
+      auto_delete = true;
+
+      delete_buffer(buffer, path.GetRawString());
+    }
+    else {
+      if (_debugMode) {
+        LAppUtil::print_log("Error loading motion %s_%d from file %s", group, num, path.GetRawString());
+      }
+      return Csm::InvalidMotionQueueEntryHandleValue;
+    }
+  }
+  else {
+    // Motion already registered, just need to set the handler
+    motion->SetFinishedMotionHandler(on_motion_finished);
+  }
+
+  // Optionally load voice file that goes along with motion
+  /*
+  Csm::csmString voice = _modelSetting->GetMotionSoundFileName(group, num);
+  if (strcmp(voice.GetRawString(), "") != 0) {
+    csmString path = voice;
+    path = _modelHomeDir + path;
+    // Do stuff with loading voice file, playing it, etc.
+  }
+  */
+
+  if (_debugMode) {
+    LAppUtil::print_log("[APP] starting motion [%s_%d]", group, num);
+  }
+
+  return _motionManager->StartMotionPriority(motion, auto_delete, priority);
+}
+
+Csm::CubismMotionQueueEntryHandle Model::start_random_motion(const Csm::csmChar* group, Csm::csmInt32 priority, Csm::ACubismMotion::FinishedMotionCallback on_motion_finished) {
+  if (_modelSetting->GetMotionCount(group) == 0) {
+    return Csm::InvalidMotionQueueEntryHandleValue;
+  }
+
+  Csm::csmInt32 num = rand() % _modelSetting->GetMotionCount(group);
+
+  return start_motion(group, num, priority, on_motion_finished);
+}
+
+void Model::do_draw() {
+  if (_model == NULL) {
+    return;
+  }
+
+  GetRenderer<Live2D::Cubism::Framework::Rendering::CubismRenderer_OpenGLES2>()->DrawModel();
+}
+
+void Model::draw(Csm::CubismMatrix44& matrix) {
+  if (_model == NULL) {
+    return;
+  }
+
+  matrix.MultiplyByMatrix(_modelMatrix);
+
+  GetRenderer<Live2D::Cubism::Framework::Rendering::CubismRenderer_OpenGLES2>()->SetMvpMatrix(&matrix);
+
+  do_draw();
+}
+
+Csm::csmBool Model::hit_test(const Csm::csmChar* area_name, Csm::csmFloat32 x, Csm::csmFloat32 y) {
+  // If we aren't at full opacity, we are ghost, cannot be hit, lol
+  if (_opacity < 1) {
+    return false;
+  }
+
+  const Csm::csmInt32 num_areas = _modelSetting->GetHitAreasCount();
+  for (Csm::csmInt32 i = 0; i < num_areas; i++) {
+    if (strcmp(_modelSetting->GetHitAreaName(i), area_name) == 0) {
+      const Csm::CubismIdHandle drawID = _modelSetting->GetHitAreaId(i);
+      return IsHit(drawID, x, y);
+    }
+  }
+
+  // If we don't have that area, was impossible to hit it
+  return false;
+}
+
+void Model::set_expression(const Csm::csmChar* expression_id) {
+  Csm::ACubismMotion* motion = _expressions[expression_id];
+  if (_debugMode) {
+    LAppUtil::print_log("[APP] starting expression [%s]", expression_id);
+  }
+
+  if (motion != NULL) {
+    _expressionManager->StartMotionPriority(motion, false, LAppDefinitions::PriorityForce);
+  }
+  else {
+    if (_debugMode) {
+      LAppUtil::print_log("Error: expression [%s] is NULL", expression_id);
+    }
+  }
+}
+
+void Model::set_random_expression() {
+  if (_expressions.GetSize() == 0) {
+    return;
+  }
+
+  Csm::csmInt32 num = rand() % _expressions.GetSize();
+  Csm::csmMap<Csm::csmString, Csm::ACubismMotion*>::const_iterator map_iter;
+  Csm::csmInt32 i = 0;
+  for (auto map_iter = _expressions.Begin(); map_iter != _expressions.End(); map_iter++, i++) {
+    if (i == num) {
+      Csm::csmString name = (*map_iter).First;
+      set_expression(name.GetRawString());
+      return;
+    }
+  }
+}
+
+void Model::reload_renderer() {
+  DeleteRenderer();
+  CreateRenderer();
+  setup_textures();
+}
+
+void Model::setup_textures() {
+  Csm::csmInt32 num_textures = _modelSetting->GetTextureCount();
+  for (Csm::csmInt32 texture_num = 0; texture_num < num_textures; texture_num++) {
+    Csm::csmString texture_path = _modelSetting->GetTextureFileName(texture_num);
+    if (strcmp(texture_path.GetRawString(), "") == 0) {
+      continue;
+    }
+    texture_path = _modelHomeDir + texture_path;
+
+    TextureManager::TextureInfo* texture_info = Displayer::get_instance()->get_texture_manager()->create_texture_from_png(texture_path.GetRawString());
+    if (texture_info == NULL) {
+      if (_debugMode) {
+        LAppUtil::print_log("Error loading texture [%d] from file %s", texture_num, texture_path.GetRawString());
+      }
+      return;
+    }
+
+    GetRenderer<Live2D::Cubism::Framework::Rendering::CubismRenderer_OpenGLES2>()->BindTexture(texture_num, texture_info->id);
+  }
+
+#ifdef PREMULTIPLIED_ALPHA_ENABLE
+  GetRenderer<Live2D::Cubism::Framework::Rendering::CubismRenderer_OpenGLES2>()->IsPremultipliedAlpha(true);
+#else
+  GetRenderer<Live2D::Cubism::Framework::Rendering::CubismRenderer_OpenGLES2>()->IsPremultipliedAlpha(false);
+#endif
+}
+
+void Model::motion_event_fired(const Csm::csmString& event_value) {
+  CubismLogInfo("%s was fired on Model!", event_value.GetRawString());
+}
+
+Csm::Rendering::CubismOffscreenFrame_OpenGLES2& Model::get_render_buffer() {
+  return _renderBuffer;
 }

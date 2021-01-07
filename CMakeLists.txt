@@ -21,24 +21,26 @@ endif()
 set(SOURCE_FILES
   "src/live2d/Allocator.cpp"
   "src/live2d/Definitions.cpp"
+  "src/live2d/Displayer.cpp"
   "src/live2d/Model.cpp"
   "src/live2d/Sprite.cpp"
+  "src/live2d/TextureManager.cpp"
   "src/live2d/Util.cpp"
   "src/ArgParse.cpp"
   "src/Detector.cpp"
-  "src/Displayer.cpp"
   "src/WinBGInput.c"
   "src/Main.cpp"
 )
 set(HEADER_FILES
   "src/live2d/Allocator.hpp"
   "src/live2d/Definitions.hpp"
+   "src/live2d/Displayer.hpp"
   "src/live2d/Model.hpp"
   "src/live2d/Sprite.hpp"
+  "src/live2d/TextureManager.hpp"
   "src/live2d/Util.hpp"
   "src/ArgParse.hpp"
   "src/Detector.hpp"
-  "src/Displayer.hpp"
   "src/WinBGInput.h"
   "src/Debug.h"
 )

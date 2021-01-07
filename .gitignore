@@ -18,16 +18,26 @@ build.ninja
 *.vcxproj
 *.vcxproj.filters
 *.vcxproj.user
+.vs/
+Release/
 Debug/
 x64/
 x86/
 FaceStuff.dir/
 
 # Ignore final executable
-FaceStuff
-FaceStuff.exe
-FaceStuff.pdb
+FaceStuff*
+*.exe
+*.pdb
 *.dll
 
-/.vs
-/Release/Resources
+# Ignore intermediate executables
+# Windows
+*.obj
+*.lib
+# Linux
+*.o
+*.a
+
+# Ignore other editor files
+*.swp

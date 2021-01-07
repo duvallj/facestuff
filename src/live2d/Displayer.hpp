@@ -9,17 +9,43 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <CubismFramework.hpp>
-#include "live2d/Allocator.hpp"
+#include "Allocator.hpp"
+#include "TextureManager.hpp"
 
 class Displayer {
 public:
+  /**
+   * @brief Get the global displayer instance
+   */
+  static Displayer* get_instance();
+
+  /**
+   * @brief Release the global displayer instance
+   */
+  static void release_instance();
+
+  /**
+   * @brief Initializer the displayer
+   * 
+   * @return true iff initialization succeeded
+   */
   bool initialize();
+
+  /**
+   * @brief Release the current displayer instance
+   */
   void release();
+
+  /**
+   * @brief Start the mainloop of the current displayer instance
+   */
   void run();
 
   GLuint create_shader();
 
-  GLFWwindow* GetWindow() { return _window; }
+  GLFWwindow* get_window() { return _window; }
+
+  TextureManager* get_texture_manager() { return &_textureManager; }
 
   bool get_is_end() { return _isEnd; }
 
@@ -38,6 +64,7 @@ private:
   bool check_shader(GLuint shaderId);
 
   LAppAllocator _cubismAllocator;
+  TextureManager _textureManager;
   Csm::CubismFramework::Option _cubismOption;
   GLFWwindow* _window;
   bool _isEnd;

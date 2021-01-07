@@ -8,6 +8,25 @@
 static const int DEFAULT_WIDTH = 640;
 static const int DEFAULT_HEIGHT = 480;
 
+namespace {
+  Displayer* s_instance = NULL;
+}
+
+Displayer* Displayer::get_instance() {
+  if (s_instance == NULL) {
+    s_instance = new Displayer();
+  }
+
+  return s_instance;
+}
+
+void Displayer::release_instance() {
+  if (s_instance != NULL) {
+    delete s_instance;
+    s_instance = NULL;
+  }
+}
+
 bool Displayer::initialize() {
   if (glfwInit() == GL_FALSE) {
     std::cout << "Error initializing GLFW" << std::endl;
