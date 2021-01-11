@@ -40,6 +40,13 @@ public:
    */
   static void print_log(const Csm::csmChar* format, ...);
 
+  /**
+   * @brief Log a message without formatting
+   * 
+   * @param[in] message The log message to print
+   */
+  static void print_message(const Csm::csmChar* message);
+
 private:
   static double current_frame;
   static double last_frame;

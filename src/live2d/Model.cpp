@@ -61,7 +61,7 @@ Model::~Model() {
   delete _modelSetting;
 }
 
-void Model::load_assets(const Csm::csmChar* dir, const Csm::csmChar* fileName) {
+void Model::load_assets(const Csm::csmChar* dir, const Csm::csmChar* fileName, TextureManager* texture_manager) {
   if (dir == NULL) {
     if (LAppDefinitions::DebugLogEnable) {
       LAppUtil::print_log("Error: NULL dir passed to Model::load_assets");
@@ -96,7 +96,7 @@ void Model::load_assets(const Csm::csmChar* dir, const Csm::csmChar* fileName) {
 
   setup_model(settings);
   CreateRenderer();
-  setup_textures();
+  setup_textures(texture_manager);
 }
 
 void Model::setup_model(Live2D::Cubism::Framework::ICubismModelSetting* settings) {
@@ -519,13 +519,13 @@ void Model::set_random_expression() {
   }
 }
 
-void Model::reload_renderer() {
+void Model::reload_renderer(TextureManager* texture_manager) {
   DeleteRenderer();
   CreateRenderer();
-  setup_textures();
+  setup_textures(texture_manager);
 }
 
-void Model::setup_textures() {
+void Model::setup_textures(TextureManager* texture_manager) {
   Csm::csmInt32 num_textures = _modelSetting->GetTextureCount();
   for (Csm::csmInt32 texture_num = 0; texture_num < num_textures; texture_num++) {
     Csm::csmString texture_path = _modelSetting->GetTextureFileName(texture_num);
@@ -534,7 +534,7 @@ void Model::setup_textures() {
     }
     texture_path = _modelHomeDir + texture_path;
 
-    TextureManager::TextureInfo* texture_info = Displayer::get_instance()->get_texture_manager()->create_texture_from_png(texture_path.GetRawString());
+    TextureManager::TextureInfo* texture_info = texture_manager->create_texture_from_png(texture_path.GetRawString());
     if (texture_info == NULL) {
       if (_debugMode) {
         LAppUtil::print_log("Error loading texture [%d] from file %s", texture_num, texture_path.GetRawString());

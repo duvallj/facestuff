@@ -1,0 +1,3 @@
+## Live2D Open Software License
+
+Some provided code comes from the [Cubism Native Samples Windows OpenGL Demo](https://github.com/Live2D/CubismNativeSamples/tree/develop/Samples/OpenGL/Demo/proj.win.cmake), and as such are subject to the [Live2D Open Software License Agreement](https://www.live2d.com/eula/live2d-open-software-license-agreement_en.html). Usage of the project and sources that contain such code is taken as accepting this agreement.

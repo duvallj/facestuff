@@ -7,6 +7,8 @@
 #include <Type/csmRectF.hpp>
 #include <Rendering/OpenGL/CubismOffscreenSurface_OpenGLES2.hpp>
 
+#include "TextureManager.hpp"
+
 
 class Model : public Csm::CubismUserModel {
 public:
@@ -18,10 +20,20 @@ public:
 
   /**
    * @brief Load from a model3.json file
+   * 
+   * @param[in] dir The directory the json is located in
+   * @param[in] filename The filename of the json in the directory
+   * @param[in] texture_manager The texture manager used to keep track of loaded textures
    */
-  void load_assets(const Csm::csmChar* dir, const Csm::csmChar* filename);
+  void load_assets(const Csm::csmChar* dir, const Csm::csmChar* filename, TextureManager* texture_manager);
 
-  void reload_renderer();
+  /**
+   * @brief Reload internal renderer, refreshing all textures
+   * 
+   * @param[in] texture_manager The texture manager that keeps track of loaded textures
+   */
+  void reload_renderer(TextureManager* texture_manager);
+  
   void update();
 
   /**
@@ -63,7 +75,7 @@ protected:
   void do_draw();
 private:
   void setup_model(Csm::ICubismModelSetting* settings);
-  void setup_textures();
+  void setup_textures(TextureManager* texture_manager);
   void preload_motion_group(const Csm::csmChar* group);
   void release_motion_group(const Csm::csmChar* group);
 

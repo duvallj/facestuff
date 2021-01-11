@@ -11,19 +11,10 @@
 #include <CubismFramework.hpp>
 #include "Allocator.hpp"
 #include "TextureManager.hpp"
+#include "ShaderManager.hpp"
 
 class Displayer {
 public:
-  /**
-   * @brief Get the global displayer instance
-   */
-  static Displayer* get_instance();
-
-  /**
-   * @brief Release the global displayer instance
-   */
-  static void release_instance();
-
   /**
    * @brief Initializer the displayer
    * 
@@ -41,14 +32,11 @@ public:
    */
   void run();
 
-  GLuint create_shader();
-
   GLFWwindow* get_window() { return _window; }
-
-  TextureManager* get_texture_manager() { return &_textureManager; }
+  TextureManager* get_texture_manager() { return _textureManager; }
+  ShaderManager* get_shader_manager() { return _shaderManager; }
 
   bool get_is_end() { return _isEnd; }
-
   void app_end() { _isEnd = true; }
 
 private:
@@ -61,11 +49,10 @@ private:
   */
   void initialize_cubism();
 
-  bool check_shader(GLuint shaderId);
-
   LAppAllocator _cubismAllocator;
-  TextureManager _textureManager;
-  Csm::CubismFramework::Option _cubismOption;
+  TextureManager* _textureManager;
+  ShaderManager* _shaderManager;
+  Csm::CubismFramework::Option _cubismOptions;
   GLFWwindow* _window;
   bool _isEnd;
 

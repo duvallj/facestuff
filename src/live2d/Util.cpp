@@ -76,3 +76,7 @@ void LAppUtil::print_log(const Csm::csmChar* format, ...) {
 
   va_end(args);
 }
+
+void LAppUtil::print_message(const Csm::csmChar* message) {
+  std::cerr << message << std::endl;
+}

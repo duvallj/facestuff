@@ -67,7 +67,7 @@ namespace LAppDefinitions {
   const csmBool DebugTouchLogEnable = false;
 
   // Frameworkから出力するログのレベル設定
-  const CubismFramework::Option::LogLevel CubismLoggingLevel = CubismFramework::Option::LogLevel_Verbose;
+  const CubismFramework::Option::LogLevel CubismLoggingLevel = CubismFramework::Option::LogLevel::LogLevel_Verbose;
 
   // デフォルトのレンダーターゲットサイズ
   const csmInt32 RenderTargetWidth = 1900;
