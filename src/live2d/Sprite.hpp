@@ -2,7 +2,7 @@
 #define LIVE2D_SPRITE_HPP
 
 #include <gl/glew.h>
-#include <GLFW/glfw3.h>
+#include <SDL.h>
 
 #include "ShaderManager.hpp"
 
@@ -32,14 +32,10 @@ public:
   /**
    * @brief Construct a new sprite
    * 
-   * @param[in] x
-   * @param[in] y
-   * @param[in] width
-   * @param[in] height
    * @param[in] texture_id The initialized texture the sprite will render
    * @param[in] program_id The initialized shader program that will render the sprite
    */
-  Sprite(float x, float y, float width, float height, GLuint texture_id, GLuint program_id);
+  Sprite(GLuint texture_id, GLuint program_id);
 
   /**
    * @brief Corresponding destructor to the custon constructor
@@ -57,22 +53,25 @@ public:
    * @brief Render the sprite using internal data
    * 
    * @param[in] window The window to render to
+   * @param[in] area The area the sprite will be drawn in
    */
-  void render(GLFWwindow* window) const;
+  static bool render(SDL_Window* window, SDL_Rect area, void* obj);
+  bool render(SDL_Window* window, SDL_Rect area);
 
   /**
    * @brief Render the sprite using external texture/uv data
    * 
    * @param[in] window
+   * @param[in] area
    * @param[in] texture_id
    * @param[in] uv_vertex
    */
-  void render(GLFWwindow* window, GLuint texture_id, const GLfloat uv_vertex[8]) const;
+  bool render_immediate(SDL_Window* window, SDL_Rect area, GLuint texture_id, const GLfloat uv_vertex[8]);
 
   /**
    * @brief Check for collision with sprite
    */
-  bool is_hit(GLFWwindow* window, float x, float y) const;
+  bool is_hit(SDL_Window* window, float x, float y) const;
 
   /**
    * @brief Change sprite color filter
@@ -85,26 +84,28 @@ public:
    * @param[in] a
    */
   void set_color(float r, float g, float b, float a);
-
-  /**
-   * @brief Change the position of the sprite
-   * 
-   * @param[in] x
-   * @param[in] y
-   * @param[in] width
-   * @param[in] height
-   */
-  void set_position(float x, float y, float width, float height);
-
-private:
+  
+protected:
   GLuint _textureId;
+private:
   Rect _rect;
+  SDL_Rect _lastRect;
   GLint _positionLocation;
   GLint _uvLocation;
   GLint _textureLocation;
   GLint _colorLocation;
 
   float _spriteColor[4];
+
+  /**
+   * @brief Turn an SDL_Rect into the internal representation
+   *
+   * @param[in] area The area of the screen to be drawn
+   * @return A Sprite::Rect representing that
+   */
+  static Rect transform_rect(SDL_Rect area);
+
+  bool equals_last_rect(SDL_Rect area) const;
 };
 
 #endif /* LIVE2D_SPRITE_HPP */

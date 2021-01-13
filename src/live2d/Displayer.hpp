@@ -7,14 +7,24 @@
 #define DISPLAYER_HPP
 
 #include <GL/glew.h>
-#include <GLFW/glfw3.h>
+#include <SDL.h>
 #include <CubismFramework.hpp>
+#include <acgl/gui.h>
+#include <acgl/inputhandler.h>
+#include <acgl/threads.h>
 #include "Allocator.hpp"
 #include "TextureManager.hpp"
 #include "ShaderManager.hpp"
+#include "View.hpp"
 
 class Displayer {
 public:
+  /**
+   * @brief Custom constructor/destructor pair
+   */
+  Displayer();
+  ~Displayer();
+
   /**
    * @brief Initializer the displayer
    * 
@@ -28,21 +38,31 @@ public:
   void release();
 
   /**
-   * @brief Start the mainloop of the current displayer instance
+   * @brief Check if the window size has changed, and if so, refresh the screen
+   * 
+   * Comes in static and normal variants to interop with C code
    */
-  void run();
+  static void check_resize(SDL_Event e, void* obj);
+  void check_resize();
 
-  GLFWwindow* get_window() { return _window; }
+  /**
+   * @brief Render a frame to the screen
+   */
+  static void render(SDL_Event e, void* obj);
+  void render();
+
+  SDL_Window* get_window() { return _window; }
   TextureManager* get_texture_manager() { return _textureManager; }
   ShaderManager* get_shader_manager() { return _shaderManager; }
 
   bool get_is_end() { return _isEnd; }
   void app_end() { _isEnd = true; }
 
-private:
-  Displayer();
+  enum UserEvents {
+    RefreshRequest,
+  };
 
-  ~Displayer();
+private:
 
   /**
   * @brief Initialize the Cubism SDK
@@ -53,11 +73,24 @@ private:
   TextureManager* _textureManager;
   ShaderManager* _shaderManager;
   Csm::CubismFramework::Option _cubismOptions;
-  GLFWwindow* _window;
+  SDL_Window* _window;
+  LAppView* _view;
   bool _isEnd;
 
   int _windowWidth;
   int _windowHeight;
+};
+
+/**
+ * @brief Class that contains all the mainloop logic
+ * 
+ * WARNING: the code for this is actually contained in Main.cpp
+ */
+class MainThread {
+public:
+  static bool setup(void* display);
+  static bool loop(void* display);
+  static bool cleanup(void* display);
 };
 
 #endif /* DISPLAYER_HPP */

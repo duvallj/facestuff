@@ -69,6 +69,14 @@ public:
   TextureInfo* create_texture_from_png(std::string filename);
 
   /**
+   * @brief Allocate space for a texture of the specified dimensions
+   * 
+   * @param[in] width
+   * @param[in] height
+   */
+  TextureInfo* create_texture_from_dims(GLint width, GLint height);
+
+  /**
    * @brief Release all created textures
    */
   void release_textures();

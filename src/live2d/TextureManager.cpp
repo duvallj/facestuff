@@ -92,6 +92,46 @@ TextureManager::TextureInfo* TextureManager::create_texture_from_png(std::string
   return texture_info;
 }
 
+TextureManager::TextureInfo* TextureManager::create_texture_from_dims(GLint width, GLint height) {
+  if (width == 0 || height == 0) {
+    // Invalid width/height was given
+    return nullptr;
+  }
+
+  GLuint texture_id;
+
+  glGenTextures(1, &texture_id);
+  glBindTexture(GL_TEXTURE_2D, texture_id);
+  // These will be reading in OpenCV mats, which have BGR format
+  // Having NULL as the final argument makes it allocate a new pixel array that we copy into later
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_BGR, width, height, 0, GL_BGR, GL_UNSIGNED_BYTE, NULL);
+
+  // These control how image scaling is done
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+  // These control the method used to clamp values
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+
+  glBindTexture(GL_TEXTURE_2D, 0);
+
+  TextureManager::TextureInfo* texture_info = new TextureManager::TextureInfo();
+  if (texture_info != NULL) {
+    texture_info->filename = "";
+    texture_info->width = width;
+    texture_info->height = height;
+    texture_info->id = texture_id;
+
+    _textures.PushBack(texture_info);
+  }
+  else if (LAppDefinitions::DebugLogEnable) {
+    LAppUtil::print_log("Error allocating memory for new blank (%d x %d) texture", width, height);
+  }
+
+  return texture_info;
+}
+
 void TextureManager::release_textures() {
   for (Csm::csmUint32 i = 0; i < _textures.GetSize(); i++) {
     delete _textures[i];

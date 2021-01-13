@@ -1,16 +1,10 @@
 #include "Sprite.hpp"
 #include "ShaderManager.hpp"
 
-Sprite::Sprite(float x, float y, float width, float height, GLuint texture_id, GLuint program_id) 
-: _rect() 
+Sprite::Sprite(GLuint texture_id, GLuint program_id) 
+  : _rect(),
+    _lastRect()
 {
-  float halfwidth = width * 0.5f;
-  float halfheight = height * 0.5f;
-  _rect.left = x - halfwidth;
-  _rect.right = x + halfwidth;
-  _rect.top = y + halfheight;
-  _rect.bottom = y - halfheight;
-
   _textureId = texture_id;
 
   // Fetch shader attributes from OpenGL
@@ -29,7 +23,12 @@ Sprite::~Sprite() {
   // Texture and shader are managed elsewhere, no need to manually free
 }
 
-void Sprite::render(GLFWwindow* window) const {
+bool Sprite::render(SDL_Window* window, SDL_Rect area, void* obj) {
+  Sprite* sp = reinterpret_cast<Sprite*>(obj);
+  return sp->render(window, area);
+}
+
+bool Sprite::render(SDL_Window* window, SDL_Rect area) {
   static const GLfloat uv_vertex_default[8] = {
     1.0f, 0.0f,
     0.0f, 0.0f,
@@ -37,21 +36,27 @@ void Sprite::render(GLFWwindow* window) const {
     1.0f, 1.0f
   };
 
-  render(window, _textureId, uv_vertex_default);
+  return render_immediate(window, area, _textureId, uv_vertex_default);
 }
 
-void Sprite::render(GLFWwindow* window, GLuint texture_id, const GLfloat uv_vertex[8]) const {
+bool Sprite::render_immediate(SDL_Window* window, SDL_Rect area, GLuint texture_id, const GLfloat uv_vertex[8]) {
   int max_width, max_height;
-  glfwGetWindowSize(window, &max_width, &max_height);
+  SDL_GL_GetDrawableSize(window, &max_width, &max_height);
 
   if (max_width == 0 || max_height == 0) {
-    return;
+    return false;
   }
 
   glEnable(GL_TEXTURE_2D);
   glEnableVertexAttribArray(_positionLocation);
   glEnableVertexAttribArray(_uvLocation);
   glUniform1i(_textureLocation, 0);
+
+  // Only recalculate internal _rect if the position has changed
+  if (!equals_last_rect(area)) {
+    _lastRect = area;
+    _rect = Sprite::transform_rect(area);
+  }
 
   // **magic**
   float half_width = max_width * 0.5f;
@@ -71,11 +76,13 @@ void Sprite::render(GLFWwindow* window, GLuint texture_id, const GLfloat uv_vert
   // Finally, draw the texture
   glBindTexture(GL_TEXTURE_2D, _textureId);
   glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+  return true;
 }
 
-bool Sprite::is_hit(GLFWwindow* window, float x, float y) const {
+bool Sprite::is_hit(SDL_Window* window, float x, float y) const {
   int max_width, max_height;
-  glfwGetWindowSize(window, &max_width, &max_height);
+  SDL_GL_GetDrawableSize(window, &max_width, &max_height);
 
   if (max_width == 0 || max_height == 0) {
     return false;
@@ -83,7 +90,8 @@ bool Sprite::is_hit(GLFWwindow* window, float x, float y) const {
 
   y = max_height - y;
 
-  return x >= _rect.left && x <= _rect.right && y <= _rect.top && y >= _rect.bottom;
+  return x >= _rect.left && x <= _rect.right && \
+    y <= _rect.top && y >= _rect.bottom;
 }
 
 void Sprite::set_color(float r, float g, float b, float a) {
@@ -93,11 +101,22 @@ void Sprite::set_color(float r, float g, float b, float a) {
   _spriteColor[3] = a;
 }
 
-void Sprite::set_position(float x, float y, float width, float height) {
-  float halfwidth = width * 0.5f;
-  float halfheight = height * 0.5f;
-  _rect.left = x - halfwidth;
-  _rect.right = x + halfwidth;
-  _rect.top = y + halfheight;
-  _rect.bottom = y - halfheight;
+Sprite::Rect Sprite::transform_rect(SDL_Rect area) {
+  Sprite::Rect rect;
+
+  float halfwidth = area.w * 0.5f;
+  float halfheight = area.h * 0.5f;
+  rect.left = area.x - halfwidth;
+  rect.right = area.x + halfwidth;
+  rect.top = area.y + halfheight;
+  rect.bottom = area.y - halfheight;
+
+  return rect;
+}
+
+bool Sprite::equals_last_rect(SDL_Rect area) const {
+  return area.x == _lastRect.x && \
+    area.y == _lastRect.y && \
+    area.w == _lastRect.w && \
+    area.h == _lastRect.h;
 }

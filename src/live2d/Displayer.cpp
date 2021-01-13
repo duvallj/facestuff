@@ -8,29 +8,33 @@
 #include "Util.hpp"
 #include "Definitions.hpp"
 
+static const char* DEFAULT_NAME = "FaceStuff";
 static const int DEFAULT_WIDTH = 640;
 static const int DEFAULT_HEIGHT = 480;
 
 bool Displayer::initialize() {
-  if (glfwInit() == GL_FALSE) {
-    std::cout << "Error initializing GLFW" << std::endl;
-    return GL_FALSE;
+  if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+    fprintf(stderr, "Error initializing SDL: %s\n", SDL_GetError());
+    return false;
   }
 
-  _window = glfwCreateWindow(DEFAULT_WIDTH, DEFAULT_HEIGHT, "SAMPLE", NULL, NULL);
+  _window = SDL_CreateWindow(
+    DEFAULT_NAME,
+    SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+    DEFAULT_WIDTH, DEFAULT_HEIGHT,
+    SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_OPENGL
+  );
   if (_window == NULL) {
-    std::cout << "Error creating GLFW window" << std::endl;
-    glfwTerminate();
-    return GL_FALSE;
+    fprintf(stderr, "Error creating SDL window: %s\n", SDL_GetError());
+    SDL_Quit();
+    return false;
   }
-
-  glfwMakeContextCurrent(_window);
-  glfwSwapInterval(1);
 
   if (glewInit() != GLEW_OK) {
-    std::cout << "Error initializing GLEW" << std::endl;
-    glfwTerminate();
-    return GL_FALSE;
+    std::cerr << "Error initializing GLEW" << std::endl;
+    SDL_DestroyWindow(_window);
+    SDL_Quit();
+    return false;
   }
 
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -39,48 +43,48 @@ bool Displayer::initialize() {
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-  glfwGetWindowSize(_window, &_windowWidth, &_windowHeight);
+  SDL_GL_GetDrawableSize(_window, &_windowWidth, &_windowHeight);
 
   initialize_cubism();
 
-  return GL_TRUE;
+  return true;
 }
 
 void Displayer::release() {
-  glfwDestroyWindow(_window);
-  glfwTerminate();
+  SDL_DestroyWindow(_window);
+  SDL_Quit();
 
   delete _textureManager;
+  delete _shaderManager;
+  delete _view;
 
   Csm::CubismFramework::Dispose();
 }
 
-void Displayer::run() {
-  while (glfwWindowShouldClose(_window) == GL_FALSE && !_isEnd) {
-    int width, height;
-    glfwGetWindowSize(_window, &width, &height);
-    if ((_windowWidth != width || _windowHeight != height) && width > 0 && height > 0) {
-      // TODO: resize sprite here?
+void Displayer::check_resize(SDL_Event, void* obj) {
+  Displayer* disp = reinterpret_cast<Displayer*>(obj);
+  disp->check_resize();
+}
 
-      _windowWidth = width;
-      _windowHeight = height;
-      glViewport(0, 0, width, height);
-    }
+void Displayer::check_resize() {
+  int width, height;
+  SDL_GL_GetDrawableSize(_window, &width, &height);
+  if ((_windowWidth != width || _windowHeight != height) && width > 0 && height > 0) {
+    _windowWidth = width;
+    _windowHeight = height;
+    glViewport(0, 0, width, height);
 
-    LAppUtil::update_time();
-
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glClearDepth(1.0);
-
-    // TODO: render view here
-
-    // Update window with new buffer
-    glfwSwapBuffers(_window);
-
-    // Process remaining events
-    glfwPollEvents();
+    render();
   }
+}
+
+void Displayer::render(SDL_Event, void* obj) {
+  Displayer* disp = reinterpret_cast<Displayer*>(obj);
+  disp->render();
+}
+
+void Displayer::render() {
+  _view->render();
 }
 
 Displayer::Displayer() :
@@ -91,6 +95,8 @@ Displayer::Displayer() :
   _windowHeight(0)
 {
   _textureManager = new TextureManager();
+  _shaderManager = new ShaderManager();
+  _view = new LAppView();
 }
 
 Displayer::~Displayer() {
@@ -104,7 +110,7 @@ void Displayer::initialize_cubism() {
   Csm::CubismFramework::StartUp(&_cubismAllocator, &_cubismOptions);
   Csm::CubismFramework::Initialize();
 
-  // Initialize rest of view here
+  // TODO: Initialize rest of view here
 
   LAppUtil::update_time();
 }

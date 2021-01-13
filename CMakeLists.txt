@@ -30,6 +30,7 @@ set(SOURCE_FILES
   "src/live2d/View.cpp"
   "src/ArgParse.cpp"
   "src/Detector.cpp"
+  "src/OpenCVSprite.cpp"
   "src/WinBGInput.c"
   "src/Main.cpp"
 )
@@ -45,6 +46,7 @@ set(HEADER_FILES
   "src/live2d/View.hpp"
   "src/ArgParse.hpp"
   "src/Detector.hpp"
+  "src/OpenCVSprite.hpp"
   "src/WinBGInput.h"
   "src/Debug.h"
 )
@@ -122,6 +124,12 @@ target_link_libraries(Framework Live2DCubismCore GLEW::GLEW)
 
 # Link Framework into the main executable
 target_link_libraries(${PROJECT_NAME} PRIVATE Framework)
+
+# Add ACGL for view management
+set(ACGL_DIR "ACGL")
+add_subdirectory(${ACGL_DIR})
+target_include_directories(${PROJECT_NAME} PRIVATE "${ACGL_DIR}/include")
+target_link_libraries(${PROJECT_NAME} acgl)
 
 # Copy resource directory to build directory.
 add_custom_command(
