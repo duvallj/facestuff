@@ -8,10 +8,13 @@
 
 #include <GL/glew.h>
 #include <SDL.h>
+#include <opencv2/core.hpp>
 #include <CubismFramework.hpp>
+extern "C" {
 #include <acgl/gui.h>
 #include <acgl/inputhandler.h>
 #include <acgl/threads.h>
+}
 #include "Allocator.hpp"
 #include "TextureManager.hpp"
 #include "ShaderManager.hpp"
@@ -30,7 +33,7 @@ public:
    * 
    * @return true iff initialization succeeded
    */
-  bool initialize();
+  bool initialize(const int cv_width, const int cv_height);
 
   /**
    * @brief Release the current displayer instance
@@ -42,21 +45,27 @@ public:
    * 
    * Comes in static and normal variants to interop with C code
    */
-  static void check_resize(SDL_Event e, void* obj);
+  static int check_resize(SDL_Event e, void* obj);
   void check_resize();
 
   /**
    * @brief Render a frame to the screen
    */
-  static void render(SDL_Event e, void* obj);
   void render();
 
-  SDL_Window* get_window() { return _window; }
-  TextureManager* get_texture_manager() { return _textureManager; }
-  ShaderManager* get_shader_manager() { return _shaderManager; }
+  void update_cv(cv::Mat& frame);
+
+  SDL_Window* get_window() const { return _window; }
+  TextureManager* get_texture_manager() const { return _textureManager; }
+  ShaderManager* get_shader_manager() const { return _shaderManager; }
 
   bool get_is_end() { return _isEnd; }
   void app_end() { _isEnd = true; }
+
+  /**
+   * @brief Static callback for interop with C code
+   */
+  static int app_end(SDL_Event e, void* obj);
 
   enum UserEvents {
     RefreshRequest,
@@ -65,32 +74,21 @@ public:
 private:
 
   /**
-  * @brief Initialize the Cubism SDK
-  */
-  void initialize_cubism();
+   * @brief Initialize the Cubism SDK
+   */
+  void initialize_cubism(const int cv_width, const int cv_height);
 
   LAppAllocator _cubismAllocator;
   TextureManager* _textureManager;
   ShaderManager* _shaderManager;
   Csm::CubismFramework::Option _cubismOptions;
   SDL_Window* _window;
+  SDL_GLContext _context;
   LAppView* _view;
   bool _isEnd;
 
   int _windowWidth;
   int _windowHeight;
-};
-
-/**
- * @brief Class that contains all the mainloop logic
- * 
- * WARNING: the code for this is actually contained in Main.cpp
- */
-class MainThread {
-public:
-  static bool setup(void* display);
-  static bool loop(void* display);
-  static bool cleanup(void* display);
 };
 
 #endif /* DISPLAYER_HPP */

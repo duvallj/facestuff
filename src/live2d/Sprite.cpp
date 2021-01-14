@@ -1,5 +1,6 @@
 #include "Sprite.hpp"
-#include "ShaderManager.hpp"
+#include "Definitions.hpp"
+#include "Util.hpp"
 
 Sprite::Sprite(GLuint texture_id, GLuint program_id) 
   : _rect(),
@@ -36,6 +37,10 @@ bool Sprite::render(SDL_Window* window, SDL_Rect area) {
     1.0f, 1.0f
   };
 
+  if (LAppDefinitions::DebugLogEnable) {
+    LAppUtil::print_log("Rendering sprite at x:%d y:%d w:%d h:%d", area.x, area.y, area.w, area.h);
+  }
+
   return render_immediate(window, area, _textureId, uv_vertex_default);
 }
 
@@ -61,12 +66,20 @@ bool Sprite::render_immediate(SDL_Window* window, SDL_Rect area, GLuint texture_
   // **magic**
   float half_width = max_width * 0.5f;
   float half_height = max_height * 0.5f;
-  float position_vertex[8] = {
+  /* float position_vertex[8] = {
     (_rect.right - half_width) / half_width, (_rect.top - half_height) / half_height,
     (_rect.left - half_width) / half_width, (_rect.top - half_height) / half_height,
     (_rect.left - half_width) / half_width, (_rect.bottom - half_height) / half_height,
     (_rect.right - half_width) / half_width, (_rect.bottom - half_height) / half_height,
+  };*/
+  float position_vertex[8] = {
+    0.538947, 0.950000,
+    -0.538947, 0.950000,
+    -0.538947, -0.950000,
+    0.538947, -0.950000
   };
+
+  fprintf(stderr, "(%f, %f), (%f, %f), (%f, %f), (%f, %f)\n", position_vertex[0], position_vertex[1], position_vertex[2], position_vertex[3], position_vertex[4], position_vertex[5], position_vertex[6], position_vertex[7]);
 
   // Set the vertex paramaters from our computations
   glVertexAttribPointer(_positionLocation, 2, GL_FLOAT, GL_FALSE, 0, position_vertex);

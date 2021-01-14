@@ -1,3 +1,5 @@
+#define SDL_MAIN_HANDLED
+
 #include "Detector.hpp"
 extern "C" {
   #include "WinBGInput.h"
@@ -25,19 +27,40 @@ std::cout << "Program usage: " << argv[0] << " {OPTIONS}\n"
 "                            eye detection within the face\n" << std::endl;
 }
 
-void detect_and_display(cv::Mat frame, detector::Detector dct) {
-  dct.detect_face(frame);
-  if (dct.has_detected()) {
-    dct.draw_face(frame);
-  }
-  cv::imshow("Video", frame);
-}
+enum KEY_CODES {
+  KEY_ESC,
+  NUM_KEY_CODES
+};
+
+static const SDL_Scancode SCANCODES[NUM_KEY_CODES] = {
+  SDL_SCANCODE_ESCAPE,
+};
 
 class MainState {
 public:
   Displayer* disp;
   cv::VideoCapture cap;
   detector::Detector dct;
+
+  ACGL_ih_eventdata_t* evdata;
+  ACGL_ih_keybinds_t* keybinds;
+
+  /**
+   * Custom constructor/destructor
+   */
+  MainState() : disp(NULL), evdata(NULL), keybinds(NULL) {}
+  ~MainState() { release(); }
+
+  void init(Displayer* init_disp) {
+    release();
+
+    disp = init_disp;
+    evdata = ACGL_ih_init_eventdata(NUM_KEY_CODES);
+    keybinds = ACGL_ih_init_keybinds(SCANCODES, NUM_KEY_CODES);
+
+    ACGL_ih_register_keyevent(evdata, KEY_ESC, Displayer::app_end, disp);
+    ACGL_ih_register_windowevent(evdata, Displayer::check_resize, disp);
+  }
 
   static bool tick(void* obj) {
     MainState* state = reinterpret_cast<MainState*>(obj);
@@ -50,12 +73,45 @@ public:
       std::cout << "Blank frame encountered (hit end of video)" << std::endl;
       return false;
     }
-    detect_and_display(_frame, dct);
+    detect_and_display(_frame);
+
+    // Request that the display be redrawn
+    SDL_Event ev;
+    SDL_zero(ev);
+    ev.type = SDL_USEREVENT;
+    ev.user.code = Displayer::RefreshRequest;
+    ev.user.data1 = NULL;
+    ev.user.data2 = NULL;
+    SDL_PushEvent(&ev);
+
     return true;
   }
 
 private:
   cv::Mat _frame;
+
+  void detect_and_display(cv::Mat frame) {
+    dct.detect_face(frame);
+    if (dct.has_detected()) {
+      dct.draw_face(frame);
+    }
+
+    disp->update_cv(frame);
+  }
+
+  void release() {
+    // Disp not managed by us, don't free
+
+    if (evdata != NULL) {
+      ACGL_ih_deinit_eventdata(evdata);
+      evdata = NULL;
+    }
+
+    if (keybinds != NULL) {
+      ACGL_ih_deinit_keybinds(keybinds);
+      keybinds = NULL;
+    }
+  }
 };
 
 void mainloop(MainState* state) {
@@ -78,27 +134,23 @@ void mainloop(MainState* state) {
   }
 
   SDL_Event e;
-  if (!state->disp->get_is_end() && SDL_WaitEvent(&e) != 0) {
+  while (!state->disp->get_is_end() && SDL_WaitEvent(&e) != 0) {
     switch (e.type) {
     case SDL_QUIT:
       state->disp->app_end();
       break;
     case SDL_WINDOWEVENT:
-      // Handle with ACGL
+      ACGL_ih_handle_windowevent(e, state->evdata);
       break;
     case SDL_KEYUP:
     case SDL_KEYDOWN:
-      // Handle with ACGL
+      ACGL_ih_handle_keyevent(e, state->keybinds, state->evdata);
       break;
     case SDL_USEREVENT:
       // Custom handlers, more to be added later
       switch (e.user.code) {
       case Displayer::RefreshRequest:
         LAppUtil::update_time();
-
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glClearDepth(1.0);
 
         state->disp->render();
         break;
@@ -113,6 +165,8 @@ void mainloop(MainState* state) {
     fprintf(stderr, "Error stopping main_thread: %s\n", SDL_GetError());
     return;
   }
+
+  ACGL_thread_destroy(main_thread);
 }
 
 int main(int argc, const char** argv) {
@@ -151,20 +205,38 @@ int main(int argc, const char** argv) {
       << std::endl;
     return 1;
   }
+  cv::Mat frame;
+  state->cap.read(frame);
+  if (frame.empty()) {
+    std::cout << "Blank frame encountered (hit end of video)" << std::endl;
+    return false;
+  }
+  const int width = frame.cols;
+  const int height = frame.rows;
   std::cout << "Camera Opened." << std::endl;
 
   bg_input_init();
   std::cout << "Background keyboard hook initialized." << std::endl;
 
-  state->disp = new Displayer();
+  Displayer* disp = new Displayer();
+  if (!disp->initialize(width, height)) {
+    std::cout << "Failed to open display, exiting early" << std::endl;
+    goto main_cleanup;
+  }
   std::cout << "Display opened with OpenGL." << std::endl;
 
+  state->init(disp);
   mainloop(state);
 
   std::cout << "Done!" << std::endl;
 
-  delete state->disp;
+main_cleanup:
+  delete disp;
   bg_input_deinit();
+
+  delete state;
+
+  std::cout << "Cleaned up all memory, exiting." << std::endl;
 
   return 0;
 }

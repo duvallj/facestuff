@@ -139,3 +139,11 @@ add_custom_command(
     ${CMAKE_COMMAND} -E
       copy_directory ${LIVE2D_RES_PATH} $<TARGET_FILE_DIR:${PROJECT_NAME}>/Resources
 )
+
+add_custom_command(
+  TARGET ${PROJECT_NAME}
+  POST_BUILD
+  COMMAND
+    ${CMAKE_COMMAND} -E
+      copy_directory "data" $<TARGET_FILE_DIR:${PROJECT_NAME}>/data
+)

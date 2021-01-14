@@ -48,8 +48,6 @@ Model::Model()
 }
 
 Model::~Model() {
-  _renderBuffer.DestroyOffscreenFrame();
-
   release_motions();
   release_expressions();
 
@@ -61,7 +59,7 @@ Model::~Model() {
   delete _modelSetting;
 }
 
-void Model::load_assets(const Csm::csmChar* dir, const Csm::csmChar* fileName, TextureManager* texture_manager) {
+void Model::load_assets(TextureManager* texture_manager, const Csm::csmChar* dir, const Csm::csmChar* fileName) {
   if (dir == NULL) {
     if (LAppDefinitions::DebugLogEnable) {
       LAppUtil::print_log("Error: NULL dir passed to Model::load_assets");
@@ -554,8 +552,4 @@ void Model::setup_textures(TextureManager* texture_manager) {
 
 void Model::motion_event_fired(const Csm::csmString& event_value) {
   CubismLogInfo("%s was fired on Model!", event_value.GetRawString());
-}
-
-Csm::Rendering::CubismOffscreenFrame_OpenGLES2& Model::get_render_buffer() {
-  return _renderBuffer;
 }

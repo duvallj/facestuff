@@ -1,8 +1,10 @@
 #include "Displayer.hpp"
 
 #include <iostream>
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
+#include <gl/glew.h>
+#include <SDL.h>
+#include <SDL_opengl.h>
+#include <gl/GLU.h>
 #include <Utils/CubismDebug.hpp>
 
 #include "Util.hpp"
@@ -12,7 +14,7 @@ static const char* DEFAULT_NAME = "FaceStuff";
 static const int DEFAULT_WIDTH = 640;
 static const int DEFAULT_HEIGHT = 480;
 
-bool Displayer::initialize() {
+bool Displayer::initialize(const int cv_width, const int cv_height) {
   if (SDL_Init(SDL_INIT_VIDEO) < 0) {
     fprintf(stderr, "Error initializing SDL: %s\n", SDL_GetError());
     return false;
@@ -30,11 +32,26 @@ bool Displayer::initialize() {
     return false;
   }
 
-  if (glewInit() != GLEW_OK) {
-    std::cerr << "Error initializing GLEW" << std::endl;
+  // Create the OpenGL context
+  _context = SDL_GL_CreateContext(_window);
+  if (_context == NULL) {
+    fprintf(stderr, "Error initializing GL context: %s\n", SDL_GetError());
+    SDL_Quit();
+    return false;
+  }
+
+  glewExperimental = GL_TRUE;
+  GLenum glewError = glewInit();
+  if (glewError != GLEW_OK) {
+    fprintf(stderr, "Error initializing GLEW: %s\n", glewGetErrorString(glewError));
     SDL_DestroyWindow(_window);
     SDL_Quit();
     return false;
+  }
+
+  // Set VSync
+  if (SDL_GL_SetSwapInterval(1) < 0) {
+    fprintf(stderr, "Warning: unable to set VSync: %s\n", SDL_GetError());
   }
 
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -45,7 +62,7 @@ bool Displayer::initialize() {
 
   SDL_GL_GetDrawableSize(_window, &_windowWidth, &_windowHeight);
 
-  initialize_cubism();
+  initialize_cubism(cv_width, cv_height);
 
   return true;
 }
@@ -61,9 +78,11 @@ void Displayer::release() {
   Csm::CubismFramework::Dispose();
 }
 
-void Displayer::check_resize(SDL_Event, void* obj) {
+int Displayer::check_resize(SDL_Event, void* obj) {
   Displayer* disp = reinterpret_cast<Displayer*>(obj);
   disp->check_resize();
+
+  return 0;
 }
 
 void Displayer::check_resize() {
@@ -74,22 +93,26 @@ void Displayer::check_resize() {
     _windowHeight = height;
     glViewport(0, 0, width, height);
 
+    _view->initialize_matricies(_window);
+
     render();
   }
 }
 
-void Displayer::render(SDL_Event, void* obj) {
-  Displayer* disp = reinterpret_cast<Displayer*>(obj);
-  disp->render();
-}
-
 void Displayer::render() {
+  glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glClearDepth(1.0);
+
   _view->render();
+
+  SDL_GL_SwapWindow(_window);
 }
 
 Displayer::Displayer() :
   _cubismOptions(),
   _window(NULL),
+  _context(NULL),
   _isEnd(false),
   _windowWidth(0),
   _windowHeight(0)
@@ -103,14 +126,25 @@ Displayer::~Displayer() {
   release();
 }
 
-void Displayer::initialize_cubism() {
+void Displayer::initialize_cubism(const int cv_width, const int cv_height) {
   _cubismOptions.LogFunction = LAppUtil::print_message;
   _cubismOptions.LoggingLevel = LAppDefinitions::CubismLoggingLevel; // Live2D::Cubism::Framework::CubismFramework::Option::LogLevel::LogLevel_Verbose;
   
   Csm::CubismFramework::StartUp(&_cubismAllocator, &_cubismOptions);
   Csm::CubismFramework::Initialize();
 
-  // TODO: Initialize rest of view here
+  _view->initialize_matricies(_window);
+  _view->initialize_sprites(_textureManager, _shaderManager, cv_width, cv_height);
 
   LAppUtil::update_time();
+}
+
+void Displayer::update_cv(cv::Mat& frame) {
+  _view->update_cv(frame);
+}
+
+int Displayer::app_end(SDL_Event e, void* obj) {
+  Displayer* disp = reinterpret_cast<Displayer*>(obj);
+  disp->app_end();
+  return 0;
 }

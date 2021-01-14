@@ -27,7 +27,7 @@ Csm::csmByte* LAppUtil::load_file_as_bytes(const std::string filePath, Csm::csmS
   else {
     // Getting file information failed, note that
     if (LAppDefinitions::DebugLogEnable) {
-      LAppUtil::print_log("Error getting file information for %s", filePath);
+      LAppUtil::print_log("Error getting file information for %s", filePath.c_str());
     }
     return NULL;
   }

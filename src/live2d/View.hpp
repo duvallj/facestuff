@@ -6,11 +6,14 @@
 #include <Math/CubismMatrix44.hpp>
 #include <Math/CubismViewMatrix.hpp>
 #include <CubismFramework.hpp>
-#include <Rendering/OpenGL/CubismOffscreenSurface_OpenGLES2.hpp>
 
 #include "Sprite.hpp"
 #include "Model.hpp"
+
+#include "../OpenCVSprite.hpp"
+extern "C" {
 #include <acgl/gui.h>
+}
 
 /**
  * This class is in charge of instantiating background sprites and models, resizing them appropriately, and
@@ -25,26 +28,29 @@ public:
   ~LAppView();
 
   /**
-   * @brief After view has been instantiated, initialize it
-   */
-  void initialize();
-
-  /**
-   * @brief Render the view
+   * @brief Re-initialize view matricies from the window height/width
    * 
-   * Renders all objects in the view to the screen
+   * Must be called when the window resizes
    */
-  void render();
+  void initialize_matricies(SDL_Window* window);
 
   /**
    * @brief Initializes all internal sprites
    */
-  void initialize_sprites();
+  void initialize_sprites(TextureManager* texture_manager, ShaderManager* shader_manager, const int cv_width, const int cv_height);
 
   /**
-   * @brief Resizes all sprites to match the new window size
+   * @brief static callback to render just the Live2D model
    */
-  void resize_sprites();
+  static bool render_model(SDL_Window* window, SDL_Rect area, void* obj);
+  bool render_model(SDL_Window* window, SDL_Rect area);
+
+  /**
+ * @brief Render the view
+ *
+ * Renders all objects in the view to the screen
+ */
+  void render();
 
   /**
    * @brief Convert device coordinate to coordinate in the view
@@ -78,16 +84,6 @@ public:
    */
   float device_to_screen_y(float device_y) const;
 
-  void pre_model_draw(Model& model_ref);
-  void post_model_draw(Model& model_ref);
-
-  /**
-   * @brief Get the alpha of the sprite to be drawn
-   * 
-   * Calculates this based on the model number, for some reason, idk honestly
-   */
-  float get_sprite_alpha(int model_num) const;
-
   /**
    * @brief Set the default background color
    * 
@@ -97,12 +93,25 @@ public:
    */
   void set_render_target_clear_color(float r, float g, float b);
 
+  /**
+   * @brief Update the internal OpenCV sprite
+   */
+  void update_cv(cv::Mat& frame);
+
+  ACGL_gui_t* get_gui() const { return _gui; }
+
 private:
   Csm::CubismMatrix44* _deviceToScreen;
   Csm::CubismViewMatrix* _viewMatrix;
   GLuint _programId;
+
+  Sprite* _cv_output;
+  ACGL_gui_object_t* _cv_output_node;
+
+  Model* _model;
+  ACGL_gui_object_t* _model_node;
   
-  ACGL_gui_t* gui;
+  ACGL_gui_t* _gui;
   Csm::Rendering::CubismOffscreenFrame_OpenGLES2 _renderBuffer;
   float _clearColor[4];
 };

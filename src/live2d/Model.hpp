@@ -25,7 +25,7 @@ public:
    * @param[in] filename The filename of the json in the directory
    * @param[in] texture_manager The texture manager used to keep track of loaded textures
    */
-  void load_assets(const Csm::csmChar* dir, const Csm::csmChar* filename, TextureManager* texture_manager);
+  void load_assets(TextureManager* texture_manager, const Csm::csmChar* dir, const Csm::csmChar* filename);
 
   /**
    * @brief Reload internal renderer, refreshing all textures
@@ -66,11 +66,6 @@ public:
    */
   virtual Csm::csmBool hit_test(const Csm::csmChar* area_name, Csm::csmFloat32 x, Csm::csmFloat32 y);
 
-  /**
-   * @brief Returns a reference to the internal render buffer of the model
-   */
-  Csm::Rendering::CubismOffscreenFrame_OpenGLES2& get_render_buffer();
-
 protected:
   void do_draw();
 private:
@@ -104,8 +99,6 @@ private:
   const Csm::CubismId* _idParamBodyAngleX; ///< パラメータID: ParamBodyAngleX
   const Csm::CubismId* _idParamEyeBallX; ///< パラメータID: ParamEyeBallX
   const Csm::CubismId* _idParamEyeBallY; ///< パラメータID: ParamEyeBallXY
-
-  Csm::Rendering::CubismOffscreenFrame_OpenGLES2  _renderBuffer;   ///< フレームバッファ以外の描画先
 };
 
 #endif /* LIVE2D_MODEL_HPP */
