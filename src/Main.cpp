@@ -2,7 +2,7 @@
 
 #include "Detector.hpp"
 extern "C" {
-  #include "WinBGInput.h"
+#include "WinBGInput.h"
 }
 
 #include "live2d/Displayer.hpp"

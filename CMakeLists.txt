@@ -66,8 +66,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE ${OpenCV_LIBS})
 
 find_package(GLEW REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE GLEW::GLEW)
-find_package(glfw3 CONFIG REQUIRED)
-target_link_libraries(${PROJECT_NAME} PRIVATE glfw)
 find_path(STB_INCLUDE_DIRS "stb.h")
 target_include_directories(${PROJECT_NAME} PRIVATE ${STB_INCLUDE_DIRS})
 find_package(OpenGL REQUIRED)

@@ -3,7 +3,6 @@
 
 #include <string>
 #include <gl/glew.h>
-#include <GLFW/glfw3.h>
 #include <Type/csmVector.hpp>
 
 typedef uint32_t FULL_COLOR_TYPE;

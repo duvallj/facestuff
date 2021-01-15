@@ -2,17 +2,17 @@
 #include "Definitions.hpp"
 #include "Util.hpp"
 
-Sprite::Sprite(GLuint texture_id, GLuint program_id) 
-  : _rect(),
-    _lastRect()
+Sprite::Sprite(GLuint texture_id, GLuint program_id) :
+  _rect(),
+  _lastRect(),
+  _textureId(texture_id),
+  _programId(program_id)
 {
-  _textureId = texture_id;
-
   // Fetch shader attributes from OpenGL
   _positionLocation = glGetAttribLocation(program_id, "position");
-  _uvLocation = glGetAttribLocation(program_id, "uv");
-  _textureLocation = glGetAttribLocation(program_id, "texture");
-  _colorLocation = glGetAttribLocation(program_id, "baseColor");
+  _uvLocation = glGetAttribLocation(program_id, "vertexUV");
+  _textureLocation = glGetUniformLocation(program_id, "myTexture");
+  _colorLocation = glGetUniformLocation(program_id, "baseColor");
 
   _spriteColor[0] = 1.0f;
   _spriteColor[1] = 1.0f;
@@ -53,6 +53,7 @@ bool Sprite::render_immediate(SDL_Window* window, SDL_Rect area, GLuint texture_
   }
 
   glEnable(GL_TEXTURE_2D);
+  glUseProgram(_programId);
   glEnableVertexAttribArray(_positionLocation);
   glEnableVertexAttribArray(_uvLocation);
   glUniform1i(_textureLocation, 0);
@@ -66,17 +67,11 @@ bool Sprite::render_immediate(SDL_Window* window, SDL_Rect area, GLuint texture_
   // **magic**
   float half_width = max_width * 0.5f;
   float half_height = max_height * 0.5f;
-  /* float position_vertex[8] = {
-    (_rect.right - half_width) / half_width, (_rect.top - half_height) / half_height,
-    (_rect.left - half_width) / half_width, (_rect.top - half_height) / half_height,
-    (_rect.left - half_width) / half_width, (_rect.bottom - half_height) / half_height,
-    (_rect.right - half_width) / half_width, (_rect.bottom - half_height) / half_height,
-  };*/
   float position_vertex[8] = {
-    0.538947, 0.950000,
-    -0.538947, 0.950000,
-    -0.538947, -0.950000,
-    0.538947, -0.950000
+    _rect.right/ half_width, _rect.top / half_height,
+    _rect.left / half_width, _rect.top / half_height,
+    _rect.left / half_width, _rect.bottom / half_height,
+    _rect.right / half_width, _rect.bottom / half_height,
   };
 
   fprintf(stderr, "(%f, %f), (%f, %f), (%f, %f), (%f, %f)\n", position_vertex[0], position_vertex[1], position_vertex[2], position_vertex[3], position_vertex[4], position_vertex[5], position_vertex[6], position_vertex[7]);

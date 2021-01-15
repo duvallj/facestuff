@@ -4,13 +4,13 @@ GLuint ShaderManager::create_shader()
 {
   GLuint vertexShaderId = glCreateShader(GL_VERTEX_SHADER);
   const char* vertexShader =
-    "#version 120\n"
-    "attribute vec3 position;"
-    "attribute vec2 uv;"
-    "varying vec2 vuv;"
+    "#version 330 core\n"
+    "layout(location = 0) in vec3 position;"
+    "layout(location = 1) in vec2 vertexUV;"
+    "out vec2 UV;"
     "void main(void){"
-    "    gl_Position = vec4(position, 1.0);"
-    "    vuv = uv;"
+    "    gl_Position = vec4(position, 1);"
+    "    UV = vertexUV;"
     "}";
   glShaderSource(vertexShaderId, 1, &vertexShader, NULL);
   glCompileShader(vertexShaderId);
@@ -20,12 +20,13 @@ GLuint ShaderManager::create_shader()
 
   GLuint fragmentShaderId = glCreateShader(GL_FRAGMENT_SHADER);
   const char* fragmentShader =
-    "#version 120\n"
-    "varying vec2 vuv;"
-    "uniform sampler2D texture;"
+    "#version 330 core\n"
+    "in vec2 UV;"
+    "out vec4 color;"
+    "uniform sampler2D myTexture;"
     "uniform vec4 baseColor;"
-    "void main(void){"
-    "    gl_FragColor = texture2D(texture, vuv) * baseColor;"
+    "void main(){"
+    "    color = baseColor * texture(myTexture, UV).rgba;"
     "}";
   glShaderSource(fragmentShaderId, 1, &fragmentShader, NULL);
   glCompileShader(fragmentShaderId);

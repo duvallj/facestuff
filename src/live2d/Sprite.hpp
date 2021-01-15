@@ -87,6 +87,7 @@ public:
   
 protected:
   GLuint _textureId;
+  GLuint _programId;
 private:
   Rect _rect;
   SDL_Rect _lastRect;

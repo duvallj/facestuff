@@ -6,7 +6,7 @@
 #include <iostream>
 #include <fstream>
 #include <gl/glew.h>
-#include <GLFW/glfw3.h>
+#include <SDL.h>
 #include <Model/CubismMoc.hpp>
 #include "Definitions.hpp"
 
@@ -61,8 +61,9 @@ Csm::csmFloat32 LAppUtil::get_delta_time() {
 }
 
 void LAppUtil::update_time() {
-  current_frame = glfwGetTime();
-  delta_time = current_frame = last_frame;
+  current_frame = SDL_GetTicks();
+  current_frame /= 1000.0;
+  delta_time = current_frame - last_frame;
   last_frame = current_frame;
 }
 
