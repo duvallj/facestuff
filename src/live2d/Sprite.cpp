@@ -56,7 +56,6 @@ bool Sprite::render_immediate(SDL_Window* window, SDL_Rect area, GLuint texture_
   glUseProgram(_programId);
   glEnableVertexAttribArray(_positionLocation);
   glEnableVertexAttribArray(_uvLocation);
-  glUniform1i(_textureLocation, 0);
 
   // Only recalculate internal _rect if the position has changed
   if (!equals_last_rect(area)) {
@@ -81,8 +80,12 @@ bool Sprite::render_immediate(SDL_Window* window, SDL_Rect area, GLuint texture_
   glVertexAttribPointer(_uvLocation, 2, GL_FLOAT, GL_FALSE, 0, uv_vertex);
   glUniform4f(_colorLocation, _spriteColor[0], _spriteColor[1], _spriteColor[2], _spriteColor[3]);
 
-  // Finally, draw the texture
+  // Set up properties for the texture
+  glUniform1i(_textureLocation, 0);
+  glActiveTexture(GL_TEXTURE0 + 0);
   glBindTexture(GL_TEXTURE_2D, _textureId);
+
+  // Finally, draw the texture
   glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
   return true;

@@ -67,10 +67,6 @@ public:
    */
   static int app_end(SDL_Event e, void* obj);
 
-  enum UserEvents {
-    RefreshRequest,
-  };
-
 private:
 
   /**

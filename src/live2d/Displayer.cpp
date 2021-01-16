@@ -40,7 +40,7 @@ bool Displayer::initialize(const int cv_width, const int cv_height) {
     return false;
   }
 
-  glewExperimental = GL_TRUE;
+  glewExperimental = GL_FALSE;
   GLenum glewError = glewInit();
   if (glewError != GLEW_OK) {
     fprintf(stderr, "Error initializing GLEW: %s\n", glewGetErrorString(glewError));

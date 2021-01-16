@@ -6,6 +6,7 @@ extern "C" {
 
 #include <math.h>
 #include <string>
+#include <iostream>
 
 
 LAppView::LAppView() :
@@ -98,13 +99,15 @@ void LAppView::initialize_sprites(TextureManager* texture_manager, ShaderManager
   std::string background_path = LAppDefinitions::ResourcesPath;
   background_path = background_path + "/" + LAppDefinitions::BackImageName;
   TextureManager::TextureInfo* texture_info = texture_manager->create_texture_from_png(background_path);
-  _cv_output = new Sprite(texture_info->id, _programId);
+  // _cv_output = new Sprite(texture_info->id, _programId);
+  _cv_output = new OpenCVSprite(texture_manager, _programId, cv_width, cv_height);
+  // _cv_output = new OpenCVSprite(texture_info->id, _programId, cv_width, cv_height);
   if (_cv_output == NULL) { return; }
   
   if (_cv_output_node != NULL) { ACGL_gui_node_destroy(_cv_output_node); }
   _cv_output_node = ACGL_gui_node_init(
     _gui,
-    Sprite::render,
+    OpenCVSprite::render,
     NULL,
     reinterpret_cast<void*>(_cv_output)
   );
@@ -132,6 +135,11 @@ void LAppView::initialize_sprites(TextureManager* texture_manager, ShaderManager
     reinterpret_cast<void*>(this)
   );
   if (_model_node == NULL) { return; }
+  _model_node->node_type = ACGL_GUI_NODE_FILL_H | ACGL_GUI_NODE_PRESERVE_ASPECT;
+  _model_node->w = 1;
+  _model_node->h = 1;
+  _model_node->w_frac = 1;
+  _model_node->h_frac = 1;
 
   ACGL_gui_node_remove_all_children(_gui->root);
   ACGL_gui_node_add_child_front(_gui->root, _cv_output_node);
@@ -139,20 +147,13 @@ void LAppView::initialize_sprites(TextureManager* texture_manager, ShaderManager
 }
 
 void LAppView::update_cv(cv::Mat& frame) {
-  // _cv_output->update(frame);
+  _cv_output->update(frame);
   if (SDL_LockMutex(_cv_output_node->mutex) != 0) {
     fprintf(stderr, "Error, could not lock _cv_output_node->mutex in LAppView::update_cv: %s\n", SDL_GetError());
     return;
   }
   _cv_output_node->needs_update = true;
   SDL_UnlockMutex(_cv_output_node->mutex);
-  
-  if (SDL_LockMutex(_model_node->mutex) != 0) {
-    fprintf(stderr, "Error, could not lock _model_node->mutex in LAppView::update_cv: %s\n", SDL_GetError());
-    return;
-  }
-  _model_node->needs_update = true;
-  SDL_UnlockMutex(_model_node->mutex);
 }
 
 bool LAppView::render_model(SDL_Window* window, SDL_Rect area, void* obj) {
@@ -161,21 +162,23 @@ bool LAppView::render_model(SDL_Window* window, SDL_Rect area, void* obj) {
 }
 
 bool LAppView::render_model(SDL_Window* window, SDL_Rect area) {
-  float width = static_cast<float>(area.w);
-  float height = static_cast<float>(area.h);
+  float x = static_cast<float>(area.x);
+  float y = static_cast<float>(area.y);
+  float w = static_cast<float>(area.w);
+  float h = static_cast<float>(area.h);
+
+  int screen_width, screen_height;
+  SDL_GL_GetDrawableSize(window, &screen_width, &screen_height);
+  float sw = static_cast<float>(screen_width);
+  float sh = static_cast<float>(screen_height);
 
   Csm::CubismMatrix44 projection;
 
-  // TODO: see if more than the following needs to be done to get the
-  // model to render in the correct place
-  if (_model->GetModel()->GetCanvasWidth() > 1.0f && width < height) {
-    // This handles very wide models better
-    _model->GetModelMatrix()->SetWidth(2.0f);
-    projection.Scale(1.0f, width / height);
-  }
-  else {
-    projection.Scale(height / width, 1.0f);
-  }
+  std::cout << "Rendering model" << std::endl;
+  std::cout << "x:" << x << ", y:" << x << std::endl;
+  projection.Translate(x / screen_width, -y / screen_height);
+  std::cout << "w:" << w << ", sw:" << sw << ", h:" << h << ", sh:" << sh << std::endl;
+  //projection.Scale(width / screen_width, height / screen_height);
 
   if (_viewMatrix != NULL) {
     projection.MultiplyByMatrix(_viewMatrix);
@@ -188,7 +191,11 @@ bool LAppView::render_model(SDL_Window* window, SDL_Rect area) {
 }
 
 void LAppView::render() {
+  std::cerr << "OpenGL Error Before View::render: " << gluErrorString(glGetError()) << std::endl;
+  // Always forcing updates b/c GL swaps framebuffers always, nothing is persistent
+  ACGL_gui_force_update(_gui);
   ACGL_gui_render(_gui);
+  std::cerr << "OpenGL Error After View::render: " << gluErrorString(glGetError()) << std::endl;
 }
 
 float LAppView::device_to_view_x(float device_x) const {

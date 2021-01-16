@@ -105,7 +105,7 @@ private:
   Csm::CubismViewMatrix* _viewMatrix;
   GLuint _programId;
 
-  Sprite* _cv_output;
+  OpenCVSprite* _cv_output;
   ACGL_gui_object_t* _cv_output_node;
 
   Model* _model;

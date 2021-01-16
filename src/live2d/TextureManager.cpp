@@ -64,12 +64,13 @@ TextureManager::TextureInfo* TextureManager::create_texture_from_png(std::string
   glBindTexture(GL_TEXTURE_2D, texture_id);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, png_data);
 
-  // Not quite sure what this code does? Probably something important
+  // Generate Mipmap (for performant scaling) and set the blending modes
   glGenerateMipmap(GL_TEXTURE_2D);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glBindTexture(GL_TEXTURE_2D, 0);
 
+  // Unbind the current texture and release all intermediate data
+  glBindTexture(GL_TEXTURE_2D, 0);
   stbi_image_free(png_data);
   png_data = NULL;
   LAppUtil::release_bytes(raw_data);
@@ -104,10 +105,11 @@ TextureManager::TextureInfo* TextureManager::create_texture_from_dims(GLint widt
   glBindTexture(GL_TEXTURE_2D, texture_id);
   // These will be reading in OpenCV mats, which have BGR format
   // Having NULL as the final argument makes it allocate a new pixel array that we copy into later
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_BGR, width, height, 0, GL_BGR, GL_UNSIGNED_BYTE, NULL);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 
-  // These control how image scaling is done
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  // Generate Mipmap (for performant scaling) and set the blending modes
+  glGenerateMipmap(GL_TEXTURE_2D);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
   // These control the method used to clamp values

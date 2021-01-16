@@ -45,6 +45,11 @@ public:
   ACGL_ih_eventdata_t* evdata;
   ACGL_ih_keybinds_t* keybinds;
 
+  enum UserEvents {
+    RefreshRequest,
+    NewCVFrame,
+  };
+
   /**
    * Custom constructor/destructor
    */
@@ -62,24 +67,19 @@ public:
     ACGL_ih_register_windowevent(evdata, Displayer::check_resize, disp);
   }
 
-  static bool tick(void* obj) {
+  static bool graphics_tick(void* obj) {
     MainState* state = reinterpret_cast<MainState*>(obj);
-    return state->tick();
+    return state->graphics_tick();
   }
 
-  bool tick() {
-    cap.read(_frame);
-    if (_frame.empty()) {
-      std::cout << "Blank frame encountered (hit end of video)" << std::endl;
-      return false;
-    }
-    detect_and_display(_frame);
+  bool graphics_tick() {
+    // Nothing here to be done really
 
     // Request that the display be redrawn
     SDL_Event ev;
     SDL_zero(ev);
     ev.type = SDL_USEREVENT;
-    ev.user.code = Displayer::RefreshRequest;
+    ev.user.code = MainState::RefreshRequest;
     ev.user.data1 = NULL;
     ev.user.data2 = NULL;
     SDL_PushEvent(&ev);
@@ -87,17 +87,41 @@ public:
     return true;
   }
 
-private:
-  cv::Mat _frame;
+  static bool cv_tick(void* obj) {
+    MainState* state = reinterpret_cast<MainState*>(obj);
+    return state->cv_tick();
+  }
 
-  void detect_and_display(cv::Mat frame) {
-    dct.detect_face(frame);
-    if (dct.has_detected()) {
-      dct.draw_face(frame);
+  bool cv_tick() {
+    cap.read(_frame);
+    if (_frame.empty()) {
+      std::cout << "Blank frame encountered (hit end of video)" << std::endl;
+      return false;
     }
 
-    disp->update_cv(frame);
+    dct.detect_face(_frame);
+    if (dct.has_detected()) {
+      dct.draw_face(_frame);
+    }
+
+    // Request that the updated frame be put in the texture
+    SDL_Event ev;
+    SDL_zero(ev);
+    ev.type = SDL_USEREVENT;
+    ev.user.code = MainState::NewCVFrame;
+    ev.user.data1 = NULL;
+    ev.user.data2 = NULL;
+    SDL_PushEvent(&ev);
+
+    return true;
   }
+
+  void update_cv() {
+    disp->update_cv(_frame);
+  }
+
+private:
+  cv::Mat _frame;
 
   void release() {
     // Disp not managed by us, don't free
@@ -115,21 +139,39 @@ private:
 };
 
 void mainloop(MainState* state) {
-  ACGL_thread_t* main_thread = ACGL_thread_create(
+  ACGL_thread_t* graphics_thread = ACGL_thread_create(
     NULL, // No setup required
-    MainState::tick,
+    MainState::graphics_tick,
     NULL, // No cleanup required
     16, // 16ms roughly equals 60fps
     state,
     NULL
   );
 
-  if (main_thread == NULL) {
+  if (graphics_thread == NULL) {
     fprintf(stderr, "Error, could not start main_thread: %s\n", SDL_GetError());
     return;
   }
-  if (ACGL_thread_start(main_thread, "main_thread") != 0) {
-    fprintf(stderr, "Error while starting main_thread: %s\n", SDL_GetError());
+  if (ACGL_thread_start(graphics_thread, "graphics_thread") != 0) {
+    fprintf(stderr, "Error while starting graphics_thread: %s\n", SDL_GetError());
+    return;
+  }
+
+  ACGL_thread_t* cv_thread = ACGL_thread_create(
+    NULL, // No setup required
+    MainState::cv_tick,
+    NULL, // No cleanup required
+    250, // Only detect face every quarter second (for less GPU stress)
+    state,
+    NULL
+  );
+
+  if (cv_thread == NULL) {
+    fprintf(stderr, "Error, could not start cv_thread: %s\n", SDL_GetError());
+    return;
+  }
+  if (ACGL_thread_start(cv_thread, "cv_thread") != 0) {
+    fprintf(stderr, "Error while starting cv_thread: %s\n", SDL_GetError());
     return;
   }
 
@@ -149,10 +191,13 @@ void mainloop(MainState* state) {
     case SDL_USEREVENT:
       // Custom handlers, more to be added later
       switch (e.user.code) {
-      case Displayer::RefreshRequest:
+      case MainState::RefreshRequest:
         LAppUtil::update_time();
 
         state->disp->render();
+        break;
+      case MainState::NewCVFrame:
+        state->update_cv();
         break;
       default:
         break;
@@ -161,12 +206,15 @@ void mainloop(MainState* state) {
     }
   }
 
-  if (ACGL_thread_stop(main_thread) != 0) {
-    fprintf(stderr, "Error stopping main_thread: %s\n", SDL_GetError());
-    return;
+  if (ACGL_thread_stop(graphics_thread) != 0) {
+    fprintf(stderr, "Error stopping graphics_thread: %s\n", SDL_GetError());
+  }
+  if (ACGL_thread_stop(cv_thread) != 0) {
+    fprintf(stderr, "Error stopping cv_thread: %s\n", SDL_GetError());
   }
 
-  ACGL_thread_destroy(main_thread);
+  ACGL_thread_destroy(graphics_thread);
+  ACGL_thread_destroy(cv_thread);
 }
 
 int main(int argc, const char** argv) {

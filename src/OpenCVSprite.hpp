@@ -18,10 +18,12 @@ public:
    * @brief Custom constructor/destructor
    * 
    * @param[in] texture_manager
+   * @param[in] program_id The GL id of the shader to use to render this sprite
    * @param[in] frame_width
    * @param[in] frame_height
    */
   OpenCVSprite(TextureManager* texture_manager, GLuint program_id, const int frame_width, const int frame_height);
+  OpenCVSprite(GLuint texture_id, GLuint program_id, const int frame_width, const int frame_height);
   ~OpenCVSprite();
 
   /**
